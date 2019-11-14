@@ -181,7 +181,7 @@ def _simplify(points, tolerance=11):
 
 class StaticMap:
     def __init__(self, width, height, padding_x=0, padding_y=0, url_template="http://a.tile.komoot.de/komoot-2/{z}/{x}/{y}.png", tile_size=256, tile_request_timeout=None, headers=None, reverse_y=False, background_color="#fff",
-                 delay_between_retries=0):
+                 delay_between_retries=0, imgextension="", verbose=True):
         """
         :param width: map width in pixel
         :type width: int
@@ -205,6 +205,8 @@ class StaticMap:
         :type background_color: str
         :param delay_between_retries: number of seconds to wait between retries of map tile requests
         :type delay_between_retries: int
+        :param imgextension: define image file extension, if image extension not provided by url_template variable
+        :type imgextension: string
         """
         self.width = width
         self.height = height
@@ -230,6 +232,8 @@ class StaticMap:
 
         self.cache_path = Path("~/.cache/staticmap").expanduser()
         self.cache_path.mkdir(parents=True, exist_ok=True)
+        self.imgextension = imgextension
+        self.verbose = verbose
 
     def add_line(self, line):
         """
@@ -379,7 +383,8 @@ class StaticMap:
     def is_tile_cached(self, filename):
         fn = self.cache_path / filename
         if fn.exists():
-            print(fn, "exists")
+            if self.verbose:
+                print(fn, "exists")
             return fn
         return False
 
@@ -417,6 +422,11 @@ class StaticMap:
 
                 url = self.url_template.format(z=self.zoom, x=tile_x, y=tile_y)
                 filename = '_'.join(url.split("/")[2:])
+
+                # Add image format if not provided in url_template
+                if self.imgextension:
+                    filename = f'{filename}{self.imgextension}'
+
                 if self.is_tile_cached(filename):
                     cached_tiles.append((x, y, filename))
                 else:
@@ -464,6 +474,10 @@ class StaticMap:
 
                 data = BytesIO(response.content)
                 filename = '_'.join(url.split("/")[2:])
+                # Add image format if not provided in url_template
+                if self.imgextension:
+                    filename = f'{filename}{self.imgextension}'
+
                 self.cache_tile(filename, data)
                 box = [
                     self._x_to_px(x),
